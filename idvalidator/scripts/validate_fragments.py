@@ -8,8 +8,8 @@ from idvalidator import validate_single_thread
 def get_parser():
 
     ap = argparse.ArgumentParser()
-    ap.add_argument("--experiment-folder", "--input", type=str, required=True)
-    ap.add_argument("--ncores", "-j", type=int, default=1)
+    ap.add_argument("--experiment-folder", "--input", type=str, required=True, help="Path to single idtrackerai results folder")
+    ap.add_argument("--ncores", "-j", type=int, default=1, help="Number of cores to use")
     return ap
 
 

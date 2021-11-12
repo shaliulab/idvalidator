@@ -7,7 +7,7 @@ from pythonvideoannotator_module_idtrackerai.models.video.objects.idtrackerai_ob
 def get_parser():
 
     ap = argparse.ArgumentParser()
-    ap.add_argument("--session-folder", "--input", type=str, dest="input", required=True)
+    ap.add_argument("--session-folder", "--input", type=str, dest="input", required=True, help="Path to single idtrackerai results folder")
     return ap
 
 
