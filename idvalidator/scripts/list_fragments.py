@@ -7,13 +7,11 @@ from pythonvideoannotator_module_idtrackerai.models.video.objects.idtrackerai_ob
 def get_parser():
 
     ap = argparse.ArgumentParser()
-    ap.add_argument("--experiment-folder", "--input", type=str, required=True)
-    ap.add_argument("--chunk", type=int, required=True)
+    ap.add_argument("--session-folder", "--input", type=str, dest="input", required=True)
     return ap
 
 
-def list_fragments(experiment_folder, chunk):
-    project_path = os.path.join(experiment_folder, f"session_{str(chunk).zfill(6)}")
+def list_fragments(project_path):
     idtrackeraiobjectio = IdtrackeraiObjectIO()
     idtrackeraiobjectio.load_from_idtrackerai(project_path)
     rjust=20
@@ -39,7 +37,7 @@ def main(args=None):
         ap = get_parser()
         args = ap.parse_args()
 
-    list_fragments(args.experiment_folder, args.chunk)
+    list_fragments(args.input)
 
 if __name__ == "__main__":
     main()
