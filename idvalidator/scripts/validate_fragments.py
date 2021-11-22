@@ -18,7 +18,7 @@ def validate(experiment_folder, ncores=1):
     corrections = pd.read_csv(os.path.join(experiment_folder, "corrections.csv"))
     folders = corrections["folder"].unique()
 
-    if ncores == 1:
+    if ncores == 1 or len(folders) == 1:
         for folder in folders:
             validate_single_thread(corrections, os.path.join(experiment_folder, folder))
     else:
