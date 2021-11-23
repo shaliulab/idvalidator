@@ -51,7 +51,7 @@ requirements = [
     "joblib >= 0.11",
     "scikit-learn >= 0.19",
     "pandas >= 0.20.2",
-    "opencv-python == 3.4.5.20"
+    "opencv-python == 3.4.5.20",
 ]
 
 
@@ -59,7 +59,7 @@ EXCLUDE_FROM_PACKAGES = ["plots", "plots.*", "docs", "docs.*"]
 packages = find_packages(exclude=EXCLUDE_FROM_PACKAGES)
 print(packages)
 
-PACKAGE_NAME="idvalidator"
+PACKAGE_NAME = "idvalidator"
 
 version = ""
 with open(f"{PACKAGE_NAME}/__init__.py", "r") as fd:
