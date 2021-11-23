@@ -31,9 +31,6 @@ def validate(experiment_folder, ncores=1):
 
     if ncores == 1 or len(folders) == 1:
         for folder in folders:
-            chunk = int(
-                os.path.basename(folder.strip("/")).replace("session_", "")
-            )
             validate_single_thread(
                 corrections, os.path.join(experiment_folder, folder)
             )
