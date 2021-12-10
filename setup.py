@@ -100,8 +100,8 @@ setup(
     ],
     entry_points={
         "console_scripts": [
-            "validate-fragments=idvalidator.scripts.validate_fragments:main",
-            "list-fragments=idvalidator.scripts.list_fragments:main",
+            "validate-fragments=idvalidator.bin.validate_fragments:main",
+            "list-fragments=idvalidator.bin.list_fragments:main",
         ],
     },
 )
