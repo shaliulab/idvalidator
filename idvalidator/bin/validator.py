@@ -12,11 +12,10 @@ def get_parser(ap=None):
 
     if ap is None:
         ap = argparse.ArgumentParser()
-    
+
     ap.add_argument("--experiment-folder", "--input", dest="input", required=True)
     ap.add_argument("--ncores", type=int, default=-2, required=True)
-    
-    
+    return ap
 
 def main(ap=None, args=None):
 
@@ -25,7 +24,7 @@ def main(ap=None, args=None):
         args = ap.parse_args()
 
 
-    
+
     folders = os.listdir(args.input)
     folders = [folder for folder in folders if is_idtrackerai_folder(os.path.join(args.input, folder))]
     files = {folder: pick_blob_collection(os.path.join(args.input, folder)) for folder in folders}
@@ -39,4 +38,4 @@ def main(ap=None, args=None):
 
 
 if __name__ == "__main__":
-    main()   
+    main()

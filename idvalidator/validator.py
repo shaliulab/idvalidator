@@ -28,7 +28,7 @@ def check_all_identities_are_found(blobs_in_frame, identities):
 
 def get_centroids(blobs_in_frame):
 
-    blobs_in_frame = sorted(blobs_in_frame, key=lambda blob: blob.final_identity)  
+    blobs_in_frame = sorted(blobs_in_frame, key=lambda blob: blob.final_identity)
     centroids = np.vstack([blob.centroid for blob in blobs_in_frame])
     return centroids
 
@@ -47,7 +47,7 @@ def centroids_swap(centroids_previous, centroids_next, body_length_px):
     id_previous, id_next = np.where(swap)
     id_previous += 1
     id_next += 1
-    
+
     swap_ids = np.stack([id_previous, id_next], axis=1)
     return swap_ids
 
@@ -62,11 +62,11 @@ def blobs_swap(blobs_in_frame_previous, blobs_in_frame_next):
 def check_blobs(blob_file, number_of_animals):
     list_of_blobs = ListOfBlobs.load(blob_file)
     identities = list(range(number_of_animals))
-    
+
     blobs = list_of_blobs.blobs_in_video
 
     frames_fully_identified = [check_blobs_f(blobs_in_frame, check_blob_has_identity) for blobs_in_frame in blobs]
     frames_fully_tracked = [check_all_identities_are_found(blobs_in_frame, identities) for blobs_in_frame in blobs]
     identities_dont_swap = [blobs_swap(blobs[i], blobs[i+1]) for i in range(len(blobs)-1)]
-    
+
     return Validation(blob_file, frames_fully_identified, frames_fully_tracked, identities_dont_swap)
