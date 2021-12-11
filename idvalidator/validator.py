@@ -19,7 +19,13 @@ Validation = namedtuple(
 
 def check_blobs_f(blobs_in_frame, f):
     blobs = [blob for blob in blobs_in_frame if not f(blob)]
-    return blobs  # empty if all blobs are ok
+    if len(blobs) == 0:
+        check = True
+    else:
+        check = False
+
+    return check, blobs
+
 
 
 def check_blob_has_identity(blob):
@@ -33,9 +39,15 @@ def check_all_identities_are_found(blobs_in_frame, identities):
         itertools.chain(*[blob.final_identities for blob in blobs_in_frame])
     )
     # tracked_identities = [*i if isinstance(i, list) else i for i in tracked_identities]
-    return [
+    blobs = [
         i for i in tracked_identities if not i in identities
     ]  # empty if all ids are found
+    if len(blobs) == 0:
+        check = True
+    else:
+        check = False
+
+    return check, blobs
 
 
 def get_identity(final_identities):
@@ -90,7 +102,10 @@ def centroids_swap(centroids_previous, centroids_next, body_length_px):
     id_next += 1
 
     swap_ids = np.stack([id_previous, id_next], axis=1)
-    return swap_ids
+    if len(swap_ids) == 0:
+        return None
+    else:
+        return swap_ids
 
 
 def blobs_swap(blobs_in_frame_previous, blobs_in_frame_next, **kwargs):
@@ -98,6 +113,7 @@ def blobs_swap(blobs_in_frame_previous, blobs_in_frame_next, **kwargs):
     centroids_previous = get_centroids(blobs_in_frame_previous)
     centroids_next = get_centroids(blobs_in_frame_next)
     swap = centroids_swap(centroids_previous, centroids_next, **kwargs)
+    return swap
 
 
 def check_blobs(blob_file, **kwargs):
@@ -131,12 +147,25 @@ def check_blobs(blob_file, **kwargs):
     for i in range(len(blobs) - 1):
 
         blobs_in_frame = blobs[i]
-        fully_identified = check_blobs_f(
+        ##############################################################
+        fully_identified, not_identified_frames = check_blobs_f(
             blobs_in_frame, check_blob_has_identity
         )
-        frames_fully_identified.append(fully_identified)
-        fully_tracked = check_all_identities_are_found(blobs_in_frame, identities)
-        frames_fully_tracked.append(fully_tracked)
+        if fully_identified:
+            frames_fully_identified.append(fully_identified)
+        else:
+            frames_fully_identified.append(not_identified_frames)
+        ##############################################################
+
+        ##############################################################
+        fully_tracked, not_tracked_frames = check_all_identities_are_found(blobs_in_frame, identities)
+
+        if fully_tracked:
+            frames_fully_tracked.append(fully_tracked)
+        else:
+            frames_fully_tracked.append(not_tracked_frames)
+        ##############################################################
+
 
         if fully_tracked and fully_identified:
             previous_good_frame = last_good_frame
@@ -155,9 +184,12 @@ def check_blobs(blob_file, **kwargs):
                     logger.error(error)
                     identities_dont_swap.append(None) # this pair had a nissue
                 else:
-                    identities_dont_swap.append(
-                        ((previous_good_frame, i), data)
-                    )
+                    if data is None:
+                        identities_dont_swap.append(True)
+                    else:
+                        identities_dont_swap.append(
+                            ((previous_good_frame, i), data)
+                        )
         else:
             logger.debug(f"Frame {i} is not fully tracked and identified")
             identities_dont_swap.append(None) # this pair
