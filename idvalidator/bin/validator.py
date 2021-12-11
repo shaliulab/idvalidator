@@ -70,12 +70,13 @@ def single_validator(ap=None, args=None):
     blobs_file = pick_blob_collection(args.input)
     assert blobs_file is not None, f"blobs file not found in {args.input}"
 
-    validation = {os.path.basename(args.input.rstrip("/")): check_blobs(blobs_file)}
+    validation = {
+        os.path.basename(args.input.rstrip("/")): check_blobs(blobs_file)
+    }
     with open(args.output, "wb") as fh:
         pickle.dump(validation, fh)
 
     return validation
-
 
 
 if __name__ == "__main__":

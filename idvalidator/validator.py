@@ -34,9 +34,12 @@ def check_blob_has_identity(blob):
     """
     True if blob has a final identity
     """
-    
+
     if isinstance(blob.final_identities, list):
-        return len(blob.final_identities) > 0 and blob.final_identities[0] is not None
+        return (
+            len(blob.final_identities) > 0
+            and blob.final_identities[0] is not None
+        )
     else:
         return blob.final_identities is not None and blob.final_identities != 0
 
@@ -82,9 +85,23 @@ def get_centroids(blobs_in_frame):
     return centroids
 
 
-def centroids_swap(centroids_previous, centroids_next, body_length_px):
+def centroids_swap(
+    centroids_previous, centroids_next, body_length_px, jump_size=1
+):
+    """
+    Checks if any of the centroids in the previous frame is less than
+    jump_size bodies away from where a centroid
+    with a different id is in the next frame
 
-    jump_size = 1  # units of body size
+    Example animal 1 is at x y, and then animal 2 is at x', y' in the next frame
+    where x',y' is a point within jump_size bodies from x,y.
+    Then these animals could have swaped
+
+
+    The centroids are sorted by id
+    so the diagonal distance should always be least in a healthy frame
+
+    """
 
     n_animals_previous = centroids_previous.shape[0]
     n_animals_next = centroids_next.shape[0]
@@ -102,9 +119,18 @@ def centroids_swap(centroids_previous, centroids_next, body_length_px):
 
     distances = _compute_distance_matrix(centroids_previous, centroids_next)
 
+    diagonal = np.eye(n_animals_in_this_pair) == 1
+    diag_distances = distances[diagonal]
+
+    # the element in the ith row is the distance between the centroids with id i in between frames
+    # no animal should have less distance than this
+    diag_distances_expanded = np.stack(
+        [diag_distances.tolist()] * n_animals_in_this_pair, axis=1
+    )
+
     swap = np.bitwise_and(
         (distances < body_length_px * jump_size),
-        np.eye(n_animals_in_this_pair) == 0,
+        distances < diag_distances_expanded,
     )
 
     id_previous, id_next = np.where(swap)
@@ -168,14 +194,15 @@ def check_blobs(blob_file, **kwargs):
         ##############################################################
 
         ##############################################################
-        fully_tracked, not_tracked_frames = check_all_identities_are_found(blobs_in_frame, identities)
+        fully_tracked, not_tracked_frames = check_all_identities_are_found(
+            blobs_in_frame, identities
+        )
 
         if fully_tracked:
             frames_fully_tracked.append(fully_tracked)
         else:
             frames_fully_tracked.append(not_tracked_frames)
         ##############################################################
-
 
         if fully_tracked and fully_identified:
             previous_good_frame = last_good_frame
@@ -196,7 +223,9 @@ def check_blobs(blob_file, **kwargs):
                     except Exception as error:
                         logger.error(f"Problem with {blob_file} at frame {i}")
                         logger.error(error)
-                        identities_dont_swap.append(None) # this pair had a nissue
+                        identities_dont_swap.append(
+                            None
+                        )  # this pair had a nissue
                     else:
                         if data is None:
                             identities_dont_swap.append(True)
@@ -206,7 +235,7 @@ def check_blobs(blob_file, **kwargs):
                             )
         else:
             logger.debug(f"Frame {i} is not fully tracked and identified")
-            identities_dont_swap.append(None) # this pair
+            identities_dont_swap.append(None)  # this pair
 
     return Validation(
         blob_file,
