@@ -135,7 +135,7 @@ def check_blobs(blob_file, **kwargs):
             blobs_in_frame, check_blob_has_identity
         )
         frames_fully_identified.append(fully_identified)
-        fully_tracked = check_all_identities_are_found(blobs_in_frame)
+        fully_tracked = check_all_identities_are_found(blobs_in_frame, identities)
         frames_fully_tracked.append(fully_tracked)
 
         if fully_tracked and fully_identified:
@@ -143,7 +143,6 @@ def check_blobs(blob_file, **kwargs):
             last_good_frame = i
 
             if previous_good_frame is not None:
-
                 try:
                     data = blobs_swap(
                         blobs[previous_good_frame],
@@ -154,14 +153,14 @@ def check_blobs(blob_file, **kwargs):
                 except Exception as error:
                     logger.error(f"Problem with {blob_file} at frame {i}")
                     logger.error(error)
-                    identities_dont_swap.append(None)  # this pair had a nissue
+                    identities_dont_swap.append(None) # this pair had a nissue
                 else:
                     identities_dont_swap.append(
                         ((previous_good_frame, i), data)
                     )
         else:
-            logger.warning(f"Frame {i} is not fully tracked and identified")
-            identities_dont_swap.append(None)  # this pair
+            logger.debug(f"Frame {i} is not fully tracked and identified")
+            identities_dont_swap.append(None) # this pair
 
     return Validation(
         blob_file,
