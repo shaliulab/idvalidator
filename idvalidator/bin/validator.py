@@ -46,9 +46,7 @@ def main(ap=None, args=None):
     }
 
     output = joblib.Parallel(n_jobs=args.ncores)(
-        joblib.delayed(check_blobs)(
-            blobs_file
-        )
+        joblib.delayed(check_blobs)(blobs_file)
         for blobs_file in files.values()
     )
 
@@ -68,9 +66,10 @@ def single_validator(ap=None, args=None):
         args = ap.parse_args()
 
     blobs_file = pick_blob_collection(args.input)
-    output = check_blobs(
-        blobs_file
-    )
+    output = check_blobs(blobs_file)
+
+    with open(args.output, "wb") as fh:
+        pickle.dump(output, fh)
 
 
 if __name__ == "__main__":
