@@ -18,6 +18,9 @@ Validation = namedtuple(
 
 
 def check_blobs_f(blobs_in_frame, f):
+    """
+    True if every blob passes f
+    """
     blobs = [blob for blob in blobs_in_frame if not f(blob)]
     if len(blobs) == 0:
         check = True
@@ -27,14 +30,21 @@ def check_blobs_f(blobs_in_frame, f):
     return check, blobs
 
 
-
 def check_blob_has_identity(blob):
-    return (
-        blob.final_identities is not None and len(blob.final_identities) >= 1
-    )
+    """
+    True if blob has a final identity
+    """
+    
+    if isinstance(blob.final_identities, list):
+        return len(blob.final_identities) > 0 and blob.final_identities[0] is not None
+    else:
+        return blob.final_identities is not None and blob.final_identities != 0
 
 
 def check_all_identities_are_found(blobs_in_frame, identities):
+    """
+    True if all queried identities are found in this frame
+    """
     tracked_identities = list(
         itertools.chain(*[blob.final_identities for blob in blobs_in_frame])
     )
