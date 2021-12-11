@@ -144,7 +144,7 @@ def check_blobs(blob_file, **kwargs):
     frames_fully_tracked = []
     identities_dont_swap = []
     last_good_frame = None
-    for i in range(len(blobs) - 1):
+    for i in range(len(blobs)):
 
         blobs_in_frame = blobs[i]
         ##############################################################
@@ -172,24 +172,28 @@ def check_blobs(blob_file, **kwargs):
             last_good_frame = i
 
             if previous_good_frame is not None:
-                try:
-                    data = blobs_swap(
-                        blobs[previous_good_frame],
-                        blobs[i],
-                        body_length_px=body_length_px,
-                        **kwargs,
-                    )
-                except Exception as error:
-                    logger.error(f"Problem with {blob_file} at frame {i}")
-                    logger.error(error)
-                    identities_dont_swap.append(None) # this pair had a nissue
+
+                if i == len(blobs):
+                    identities_dont_swap.append(None)
                 else:
-                    if data is None:
-                        identities_dont_swap.append(True)
-                    else:
-                        identities_dont_swap.append(
-                            ((previous_good_frame, i), data)
+                    try:
+                        data = blobs_swap(
+                            blobs[previous_good_frame],
+                            blobs[i],
+                            body_length_px=body_length_px,
+                            **kwargs,
                         )
+                    except Exception as error:
+                        logger.error(f"Problem with {blob_file} at frame {i}")
+                        logger.error(error)
+                        identities_dont_swap.append(None) # this pair had a nissue
+                    else:
+                        if data is None:
+                            identities_dont_swap.append(True)
+                        else:
+                            identities_dont_swap.append(
+                                ((previous_good_frame, i), data)
+                            )
         else:
             logger.debug(f"Frame {i} is not fully tracked and identified")
             identities_dont_swap.append(None) # this pair
