@@ -102,6 +102,8 @@ setup(
         "console_scripts": [
             "validate-fragments=idvalidator.bin.validate_fragments:main",
             "list-fragments=idvalidator.bin.list_fragments:main",
+            "multi-validator=idvalidator.bin.validator:main",
+            "validator=idvalidator.bin.validator:single_validator",
         ],
     },
 )
