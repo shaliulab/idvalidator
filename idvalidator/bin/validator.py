@@ -47,9 +47,7 @@ def main(ap=None, args=None):
 
     output = joblib.Parallel(n_jobs=args.ncores)(
         joblib.delayed(check_blobs)(
-            blobs_file,
-            number_of_animals=args.number_of_animals,
-            body_length_px=args.body_length_px,
+            blobs_file
         )
         for blobs_file in files.values()
     )
@@ -71,9 +69,7 @@ def single_validator(ap=None, args=None):
 
     blobs_file = pick_blob_collection(args.input)
     output = check_blobs(
-        blobs_file,
-        number_of_animals=args.number_of_animals,
-        body_length_px=args.body_length_px,
+        blobs_file
     )
 
 
