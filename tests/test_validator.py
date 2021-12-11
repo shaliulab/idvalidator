@@ -4,6 +4,8 @@ from argparse import Namespace
 import numpy as np
 
 from idvalidator.validator import centroids_swap
+from idvalidator.validator import check_blob_has_identity, check_all_identities_are_found, check_blobs_annotation_function
+
 from idvalidator.bin.validator import single_validator
 
 class TestSwap(unittest.TestCase):
@@ -43,11 +45,55 @@ class TestValidator(unittest.TestCase):
     def test_validator(self):
         args = Namespace(input=self.session_folder, output="test.pkl")
         output = single_validator(args=args)
-        print(output)
 
     def tearDown(self):
         #os.remove("test.pkl")
         pass
+
+class TestFilters(unittest.TestCase):
+
+    def test_check_blob_has_identity_detects_missing_id(self):
+        blob  = Namespace(final_identities=[])
+        self.assertFalse(check_blob_has_identity(blob))
+        blob  = Namespace(final_identities=[0])
+        self.assertFalse(check_blob_has_identity(blob))
+        blob  = Namespace(final_identities=[None])
+        self.assertFalse(check_blob_has_identity(blob))
+
+    def test_check_blob_has_identity_detects_ids(self):
+        blob  = Namespace(final_identities=[1])
+        self.assertTrue(check_blob_has_identity(blob))
+        blob  = Namespace(final_identities=1)
+        self.assertTrue(check_blob_has_identity(blob))
+
+    def test_check_blob_annotation_function(self):
+
+        identities = list(range(1,7))
+        blobs = [Namespace(final_identities=[i]) for i in identities]
+        status, blobs = check_blobs_annotation_function(blobs, check_blob_has_identity)
+
+        self.assertTrue(status)
+        self.assertTrue(len(blobs) == 0)
+
+        blobs = [Namespace(final_identities=[i]) for i in identities]
+        blobs[1].final_identities[0] = None
+        status, blobs = check_blobs_annotation_function(blobs, check_blob_has_identity)
+        self.assertFalse(status)
+        self.assertTrue(blobs[0].final_identities[0] is None)
+
+
+    def test_check_all_identities_are_found(self):
+        identities = list(range(1,7))
+        blobs = [Namespace(final_identities=[i]) for i in identities]
+        status, ids = check_all_identities_are_found(blobs, identities)
+        self.assertTrue(status)
+        self.assertTrue(len(ids) == 0)
+        blobs[1].final_identities[0] = 0
+        status, ids = check_all_identities_are_found(blobs, identities)
+        self.assertFalse(status)
+        self.assertTrue(ids[0]==identities[1])
+
+
 
 
 if __name__ == '__main__':

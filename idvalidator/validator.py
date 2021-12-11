@@ -17,28 +17,28 @@ Validation = namedtuple(
 )
 
 
-def check_blobs_f(blobs_in_frame, f):
+
+def check_blob_has_identity(blob):
     """
-    True if every blob passes f
+    True if blob has a final identity
     """
-    blobs = [blob for blob in blobs_in_frame if not f(blob)]
+
+    if isinstance(blob.final_identities, list):
+        return len(blob.final_identities) > 0 and blob.final_identities[0] not in [None, 0]
+    else:
+        return blob.final_identities is not None and blob.final_identities != 0
+
+def check_blobs_annotation_function(blobs_in_frame, function=check_blob_has_identity):
+    """
+    True if every blob passes function
+    """
+    blobs = [blob for blob in blobs_in_frame if not function(blob)]
     if len(blobs) == 0:
         check = True
     else:
         check = False
 
     return check, blobs
-
-
-def check_blob_has_identity(blob):
-    """
-    True if blob has a final identity
-    """
-    
-    if isinstance(blob.final_identities, list):
-        return len(blob.final_identities) > 0 and blob.final_identities[0] is not None
-    else:
-        return blob.final_identities is not None and blob.final_identities != 0
 
 
 def check_all_identities_are_found(blobs_in_frame, identities):
@@ -49,15 +49,18 @@ def check_all_identities_are_found(blobs_in_frame, identities):
         itertools.chain(*[blob.final_identities for blob in blobs_in_frame])
     )
     # tracked_identities = [*i if isinstance(i, list) else i for i in tracked_identities]
-    blobs = [
-        i for i in tracked_identities if not i in identities
-    ]  # empty if all ids are found
-    if len(blobs) == 0:
+    #blobs = [
+    #    blob for blob in blobs_in_frame if blobs_in_frame.final_identities[0] in identities
+    #]  # empty if all ids are found
+
+    ids = [id for id in identities if id not in tracked_identities]
+
+    if len(ids) == 0:
         check = True
     else:
         check = False
 
-    return check, blobs
+    return check, ids
 
 
 def get_identity(final_identities):
@@ -158,16 +161,23 @@ def check_blobs(blob_file, **kwargs):
 
         blobs_in_frame = blobs[i]
         ##############################################################
-        fully_identified, not_identified_frames = check_blobs_f(
+
+        # this checks if all animals detected have an id
+        # (still may be that not animals are found)
+        fully_idd, blobs_with_unknown_id = check_blobs_annotation_function(
             blobs_in_frame, check_blob_has_identity
         )
-        if fully_identified:
-            frames_fully_identified.append(fully_identified)
+        if fully_idd:
+            frames_fully_identified.append(fully_idd)
         else:
-            frames_fully_identified.append(not_identified_frames)
+            frames_fully_identified.append(blobs_with_unknown_id)
         ##############################################################
 
         ##############################################################
+
+        # this checks if all animals are found
+        # and all animals have a unique id
+        # which should match the identities provided
         fully_tracked, not_tracked_frames = check_all_identities_are_found(blobs_in_frame, identities)
 
         if fully_tracked:
@@ -177,7 +187,7 @@ def check_blobs(blob_file, **kwargs):
         ##############################################################
 
 
-        if fully_tracked and fully_identified:
+        if fully_tracked and fully_idd:
             previous_good_frame = last_good_frame
             last_good_frame = i
 
