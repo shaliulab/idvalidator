@@ -1,4 +1,4 @@
-import argparse
+import os.path
 import itertools
 from collections import namedtuple
 import logging
@@ -37,12 +37,13 @@ def get_centroids(blobs_in_frame):
     return centroids
 
 
-def centroids_swap(centroids_previous, centroids_next, body_length_px, number_of_animals):
+def centroids_swap(centroids_previous, centroids_next, body_length_px):
 
     jump_size = 1 # units of body size
 
     n_animals_previous = centroids_previous.shape[0]
     n_animals_next = centroids_next.shape[0]
+    
     diff = n_animals_previous - n_animals_next
     if diff != 0:
         padding = np.array(
@@ -60,11 +61,14 @@ def centroids_swap(centroids_previous, centroids_next, body_length_px, number_of
             ])
 
     assert centroids_previous.shape[0] == centroids_next.shape[0]
+    n_animals_in_this_pair = centroids_previous.shape[0]
+
+    
     distances = _compute_distance_matrix(centroids_previous, centroids_next)
 
     swap = np.bitwise_and(
         (distances < body_length_px * jump_size),
-        np.eye(centroids_previous.shape[0]) == 0
+        np.eye(n_animals_in_this_pair) == 0
     )
 
     id_previous, id_next = np.where(swap)
@@ -82,20 +86,25 @@ def blobs_swap(blobs_in_frame_previous, blobs_in_frame_next, **kwargs):
     swap = centroids_swap(centroids_previous, centroids_next, **kwargs)
 
 
-def check_blobs(blob_file, number_of_animals, **kwargs):
+def check_blobs(blob_file, **kwargs):
+    
     list_of_blobs = ListOfBlobs.load(blob_file)
+    video_file = os.path.join(os.path.dirname(os.path.dirname(blob_file)), "video_object.npy")
+    video_object = np.load(video_file, allow_pickle=True).item()
+    number_of_animals = video_object.user_defined_parameters["number_of_animals"]
+    body_length_px = video_object.median_body_length_full_resolution
+    
     identities = list(range(1, number_of_animals+1))
+
 
     blobs = list_of_blobs.blobs_in_video
 
     frames_fully_identified = [check_blobs_f(blobs_in_frame, check_blob_has_identity) for blobs_in_frame in blobs]
     frames_fully_tracked = [check_all_identities_are_found(blobs_in_frame, identities) for blobs_in_frame in blobs]
-    #identities_dont_swap = [blobs_swap(blobs[i], blobs[i+1], number_of_animals=number_of_animals, **kwargs) for i in range(len(blobs)-1)]
-
     identities_dont_swap = []
     for i in range(len(blobs)-1):
         try:
-            data = blobs_swap(blobs[i], blobs[i+1], number_of_animals=number_of_animals, **kwargs)
+            data = blobs_swap(blobs[i], blobs[i+1], body_length_px=body_length_px, **kwargs)
         except Exception as error:
             logger.error(f"Problem with {blob_file} at frame {i}")
             logger.error(error)

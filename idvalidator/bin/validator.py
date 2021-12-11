@@ -14,8 +14,8 @@ def get_parser(ap=None):
     if ap is None:
         ap = argparse.ArgumentParser()
     ap.add_argument("--output", type=str, required=True)
-    ap.add_argument("--number-of-animals", type=int, required=True)
-    ap.add_argument("--body-length-px", type=int, required=True)
+    # ap.add_argument("--number-of-animals", type=int, required=True)
+    # ap.add_argument("--body-length-px", type=int, required=True)
     return ap
 
 def main(ap=None, args=None):
