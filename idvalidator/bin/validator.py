@@ -68,6 +68,9 @@ def single_validator(ap=None, args=None):
         args = ap.parse_args()
 
     blobs_file = pick_blob_collection(args.input)
+
+    assert blobs_file is not None, f"blobs file not found in {args.input}"
+
     output = check_blobs(
         blobs_file
     )

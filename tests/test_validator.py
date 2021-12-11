@@ -1,9 +1,10 @@
 import unittest
+from argparse import Namespace
 
 import numpy as np
 
 from idvalidator.validator import centroids_swap
-from idvalidator.validator import check_blobs
+from idvalidator.bin.validator import single_validator
 
 class TestSwap(unittest.TestCase):
 
@@ -37,10 +38,17 @@ class TestSwap(unittest.TestCase):
 
 class TestValidator(unittest.TestCase):
 
-    FILE = "tests/static_data/blobs_collection_no_gaps.npy"
+    session_folder = "tests/static_data/session_000003"
 
     def test_validator(self):
-        check_blobs(self.FILE)
+        args = Namespace(input=self.session_folder, output="test.pkl")
+        output = single_validator(args=args)
+        print(output)
+
+    def tearDown(self):
+        #os.remove("test.pkl")
+        pass
+
 
 if __name__ == '__main__':
     unittest.main()
