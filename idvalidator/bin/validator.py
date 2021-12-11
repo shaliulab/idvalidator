@@ -17,7 +17,7 @@ def get_parser(ap=None):
 
     if ap is None:
         ap = argparse.ArgumentParser()
-    ap.add_argument("--output", type=str, required=True)
+    ap.add_argument("--output", type=str)
     # ap.add_argument("--number-of-animals", type=int, required=True)
     # ap.add_argument("--body-length-px", type=int, required=True)
     return ap
@@ -52,8 +52,9 @@ def main(ap=None, args=None):
 
     validation = {folders[i]: output[i] for i in range(len(output))}
 
-    with open(args.output, "wb") as fh:
-        pickle.dump(validation, fh)
+    if args.output is not None:
+        with open(args.output, "wb") as fh:
+            pickle.dump(validation, fh)
 
     return validation
 
@@ -73,8 +74,10 @@ def single_validator(ap=None, args=None):
     validation = {
         os.path.basename(args.input.rstrip("/")): check_blobs(blobs_file)
     }
-    with open(args.output, "wb") as fh:
-        pickle.dump(validation, fh)
+
+    if args.output is not None:
+        with open(args.output, "wb") as fh:
+            pickle.dump(validation, fh)
 
     return validation
 

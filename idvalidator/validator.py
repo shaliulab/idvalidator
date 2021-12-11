@@ -90,7 +90,7 @@ def get_centroids(blobs_in_frame):
 
 
 def centroids_swap(
-    centroids_previous, centroids_next, body_length_px, jump_size=1
+    centroids_previous, centroids_next, body_length_px, jump_size=5
 ):
     """
     Checks if any of the centroids in the previous frame is less than
@@ -109,6 +109,9 @@ def centroids_swap(
     n_animals_previous = centroids_previous.shape[0]
     n_animals_next = centroids_next.shape[0]
 
+    # TODO I am not sure this makes sense
+    # because I think the centroids always are fully identified
+    ########################################
     diff = n_animals_previous - n_animals_next
     if diff != 0:
         padding = np.array([[0.0, 0.0]] * np.abs(diff))
@@ -119,17 +122,36 @@ def centroids_swap(
 
     assert centroids_previous.shape[0] == centroids_next.shape[0]
     n_animals_in_this_pair = centroids_previous.shape[0]
+    #######################
 
+    # compute distance matrix i.e. cell i,j
+    # is the distance between animal i in frame 1 and animal j in frame 2
     distances = _compute_distance_matrix(centroids_previous, centroids_next)
 
+    # diag_distances is in a healthy frame,
+    # the distance traversed by each animal in between frames
+    # they should be the minimum for each animal
+    # i.e. distance between different animals should always be more,
+    # unles there is a swap
     diagonal = np.eye(n_animals_in_this_pair) == 1
     diag_distances = distances[diagonal]
 
+
     # the element in the ith row is the distance between the centroids with id i in between frames
-    # no animal should have less distance than this
+    # no animal should have less distance than this unless there is a swap
     diag_distances_expanded = np.stack(
         [diag_distances.tolist()] * n_animals_in_this_pair, axis=1
     )
+
+    # definition of swap:
+    # 1. the distance between two given animals is very little:
+    #    less than jump_size bodies
+    # 2. the first animal has a distance with the second animal
+    #    that is less than with itself
+
+    # with 1. we make sure we dont flag as a swap
+    # events of high movement
+
 
     swap = np.bitwise_and(
         (distances < body_length_px * jump_size),
