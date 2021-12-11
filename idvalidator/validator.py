@@ -2,6 +2,7 @@ import os.path
 import itertools
 from collections import namedtuple
 import logging
+import traceback
 
 import numpy as np
 from scipy.spatial.distance import cdist
@@ -84,7 +85,7 @@ def get_centroids(blobs_in_frame):
     blobs_in_frame = sorted(
         blobs_in_frame, key=lambda blob: get_identity(blob.final_identities)
     )
-    centroids = np.vstack([blob.centroid for blob in blobs_in_frame])
+    centroids = np.vstack([blob.final_centroids for blob in blobs_in_frame])
     return centroids
 
 
@@ -99,7 +100,6 @@ def centroids_swap(
     Example animal 1 is at x y, and then animal 2 is at x', y' in the next frame
     where x',y' is a point within jump_size bodies from x,y.
     Then these animals could have swaped
-
 
     The centroids are sorted by id
     so the diagonal distance should always be least in a healthy frame
@@ -142,17 +142,17 @@ def centroids_swap(
 
     swap_ids = np.stack([id_previous, id_next], axis=1)
     if len(swap_ids) == 0:
-        return None
+        return True, []
     else:
-        return swap_ids
+        return False, swap_ids
 
 
 def blobs_swap(blobs_in_frame_previous, blobs_in_frame_next, **kwargs):
 
     centroids_previous = get_centroids(blobs_in_frame_previous)
     centroids_next = get_centroids(blobs_in_frame_next)
-    swap = centroids_swap(centroids_previous, centroids_next, **kwargs)
-    return swap
+    status, swap = centroids_swap(centroids_previous, centroids_next, **kwargs)
+    return status, swap
 
 
 def check_blobs(blob_file, **kwargs):
@@ -224,24 +224,26 @@ def check_blobs(blob_file, **kwargs):
                     identities_dont_swap.append(None)
                 else:
                     try:
-                        data = blobs_swap(
+                        status, ids = blobs_swap(
                             blobs[previous_good_frame],
                             blobs[i],
                             body_length_px=body_length_px,
                             **kwargs,
                         )
                     except Exception as error:
-                        logger.error(f"Problem with {blob_file} at frame {i}")
+                        logger.error(f"Problem with {blob_file} - frame {i} vs {previous_good_frame}")
                         logger.error(error)
+                        logger.error(traceback.print_exc())
+
                         identities_dont_swap.append(
                             None
                         )  # this pair had a nissue
                     else:
-                        if data is None:
-                            identities_dont_swap.append(True)
+                        if status:
+                            identities_dont_swap.append(status)
                         else:
                             identities_dont_swap.append(
-                                ((previous_good_frame, i), data)
+                                ((previous_good_frame, i), ids)
                             )
         else:
             logger.debug(f"Frame {i} is not fully tracked and identified")
