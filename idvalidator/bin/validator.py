@@ -50,7 +50,7 @@ def single_validator(ap=None, args=None):
 
     if args is None:
         ap = get_parser(ap)
-        ap.add_argument("session-folder", "--input", dest="input", required=True)
+        ap.add_argument("--session-folder", "--input", dest="input", required=True)
         args = ap.parse_args()
 
     blobs_file = pick_blob_collection(args.input)
