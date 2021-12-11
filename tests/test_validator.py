@@ -3,11 +3,12 @@ import unittest
 import numpy as np
 
 from idvalidator.validator import centroids_swap
+from idvalidator.validator import check_blobs
 
 class TestSwap(unittest.TestCase):
 
     def setUp(self):
-        
+
         self._centroids_before = np.array([
             [0., 0.],
             [100., 100.],
@@ -33,6 +34,13 @@ class TestSwap(unittest.TestCase):
         status = np.mean(diff == 0).tolist() == 1
         self.assertTrue(status)
 
+
+class TestValidator(unittest.TestCase):
+
+    FILE = "tests/static_data/blobs_collection_no_gaps.npy"
+
+    def test_validator(self):
+        check_blobs(self.FILE)
 
 if __name__ == '__main__':
     unittest.main()
