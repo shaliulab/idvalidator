@@ -24,6 +24,7 @@ logger_imgstore.setLevel(logging.WARNING)
 logger_lob = logging.getLogger("__main__.list_of_blobs")
 logger_lob.setLevel(logging.WARNING)
 
+
 def pipe_subprocess(cmd):
     cmds = cmd.split("|")
     subprocesses = []
@@ -70,7 +71,12 @@ def get_parser(ap=None):
         "--experiment-folder", "--input", dest="input", type=str, required=True
     )
     ap.add_argument("--chunk", type=int, required=False, default=None)
-    ap.add_argument("--skip-frame-collection", dest="skip_frame_collection", action="store_true", default=False)
+    ap.add_argument(
+        "--skip-frame-collection",
+        dest="skip_frame_collection",
+        action="store_true",
+        default=False,
+    )
     ap.add_argument(
         "--output",
         required=True,
@@ -174,12 +180,11 @@ def validate_session(input, output, chunk, skip_frame_collection=False):
                 time_window_length=time_window_length,
                 step=step,
                 colors=colors,
-                skip_frame_collection = skip_frame_collection
+                skip_frame_collection=skip_frame_collection,
             )
 
         logger.info(f"Chunk {session_name} DONE")
         return
-
 
 
 def main(ap=None, args=None):
@@ -188,18 +193,22 @@ def main(ap=None, args=None):
         ap = get_parser(ap)
         args = ap.parse_args()
 
-    n_jobs=-2
+    n_jobs = -2
 
-
-    kwargs = {"input": args.input, "output": args.output, "skip_frame_collection": args.skip_frame_collection}
-
-
+    kwargs = {
+        "input": args.input,
+        "output": args.output,
+        "skip_frame_collection": args.skip_frame_collection,
+    }
 
     if args.chunk is None:
         store = imgstore.new_for_filename(args.input)
         chunks = list(store._index.chunks)
-        #chunks = [3]
-        joblib.Parallel(n_jobs=n_jobs)(joblib.delayed(validate_session)(chunk=chunk, **kwargs) for chunk in chunks)
+        # chunks = [3]
+        joblib.Parallel(n_jobs=n_jobs)(
+            joblib.delayed(validate_session)(chunk=chunk, **kwargs)
+            for chunk in chunks
+        )
     else:
         validate_session(chunk=args.chunk, **kwargs)
 
@@ -214,7 +223,7 @@ def make_episode(
     step=50,
     colors=None,
     n_jobs=1,
-    skip_frame_collection = False # if true, it skips the frame retrieval
+    skip_frame_collection=False,  # if true, it skips the frame retrieval
 ):
 
     stores = load_store(experiment_folder, chunk=None)
