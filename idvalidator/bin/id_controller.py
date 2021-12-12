@@ -19,6 +19,10 @@ import idvalidator.bin.validator
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
+logger_imgstore = logging.getLogger("imgstore")
+logger_imgstore.setLevel(logging.WARNING)
+logger_lob = logging.getLogger("__main__.list_of_blobs")
+logger_lob.setLevel(logging.WARNING)
 
 def pipe_subprocess(cmd):
     cmds = cmd.split("|")
@@ -129,45 +133,52 @@ def validate_session(input, output, chunk, skip_frame_collection=False):
     ]
     problem_frames = np.where(np.diff(missing) != 0)[0]
 
-    time_window_length = 5000  # seconds
+    if len(problem_frames) == 0:
+        pass
 
-    store, lowres_store = load_store(input, chunk=None)
-    fps = int(round(store._metadata["framerate"]))
+    else:
+        time_window_length = 5000  # seconds
 
-    # windows = [(frame_number - 1 * fps):(frame_number + (time_window_length - 1)*fps)]
-    start_frames = problem_frames - 1 * fps  # start one second in the past
+        store, lowres_store = load_store(input, chunk=None)
+        fps = int(round(store._metadata["framerate"]))
 
-    start_frames = np.stack(
-        [
+        # windows = [(frame_number - 1 * fps):(frame_number + (time_window_length - 1)*fps)]
+        start_frames = problem_frames - 1 * fps  # start one second in the past
+
+        start_frames = np.stack(
             [
-                0,
-            ]
-            * len(start_frames),
-            start_frames,
-        ],
-        axis=1,
-    )
-    start_frames = start_frames.max(axis=1)
-    start_str = " ".join([str(e) for e in start_frames])
-    logger.info(f"Episodes start -> {start_str}")
-
-    step = compute_step(lowres_store._metadata["framerate"], 10)
-    logger.info(f"Timestamp step is set to {step}")
-
-    list_of_blobs, colors = load_data(session_folder)
-
-    for frame_in_chunk in start_frames:
-        make_episode(
-            experiment_folder=input,
-            blobs_in_video=list_of_blobs.blobs_in_video,
-            chunk=chunk,
-            frame_in_chunk=frame_in_chunk,
-            output_folder=output,
-            time_window_length=time_window_length,
-            step=step,
-            colors=colors,
-            skip_frame_collection = skip_frame_collection
+                [
+                    0,
+                ]
+                * len(start_frames),
+                start_frames,
+            ],
+            axis=1,
         )
+        start_frames = start_frames.max(axis=1)
+        start_str = " ".join([str(e) for e in start_frames])
+        logger.info(f"Chunk {session_name}. Episodes start -> {start_str}")
+
+        step = compute_step(lowres_store._metadata["framerate"], 10)
+        logger.info(f"Timestamp step is set to {step}")
+
+        list_of_blobs, colors = load_data(session_folder)
+
+        for frame_in_chunk in start_frames:
+            make_episode(
+                experiment_folder=input,
+                blobs_in_video=list_of_blobs.blobs_in_video,
+                chunk=chunk,
+                frame_in_chunk=frame_in_chunk,
+                output_folder=output,
+                time_window_length=time_window_length,
+                step=step,
+                colors=colors,
+                skip_frame_collection = skip_frame_collection
+            )
+
+        logger.info(f"Chunk {session_name} DONE")
+        return
 
 
 
@@ -187,6 +198,7 @@ def main(ap=None, args=None):
     if args.chunk is None:
         store = imgstore.new_for_filename(args.input)
         chunks = list(store._index.chunks)
+        #chunks = [3]
         joblib.Parallel(n_jobs=n_jobs)(joblib.delayed(validate_session)(chunk=chunk, **kwargs) for chunk in chunks)
     else:
         validate_session(chunk=args.chunk, **kwargs)
