@@ -263,7 +263,7 @@ def make_episode(
     )
     session_name = f"session_{str(chunk).zfill(6)}"
 
-    cmd = f"cat {episode_folder}/*.png | ffmpeg -y -f image2pipe -i - -framerate 1 -c:v libx264 {episode_folder}/{experiment_name}_{session_name}_{episode_name}.mp4"
+    cmd = f"cat {episode_folder}/*.png | ffmpeg -y -f image2pipe -r 1 -i - -c:v libx264 {episode_folder}/{experiment_name}_{session_name}_{episode_name}.mp4"
 
     print("****")
     print("CMD:", cmd)
