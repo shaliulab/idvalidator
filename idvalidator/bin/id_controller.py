@@ -242,7 +242,7 @@ def make_episode(
     )
 
     # give a name to the episode and make its folder
-    episode_name = str(timestamps[0])
+    episode_name = str(timestamps[0]).zfill(10)
     episode_folder = os.path.join(output_folder, episode_name)
     os.makedirs(episode_folder, exist_ok=True)
 
@@ -263,7 +263,7 @@ def make_episode(
     )
     session_name = f"session_{str(chunk).zfill(6)}"
 
-    cmd = f"cat {episode_folder}/*.png | ffmpeg -y -f image2pipe -i - -framerate 1 -c:v libx264 {episode_folder}/{experiment_name}_{session_name}_{episode_name.zfill(10)}.mp4"
+    cmd = f"cat {episode_folder}/*.png | ffmpeg -y -f image2pipe -i - -framerate 1 -c:v libx264 {episode_folder}/{experiment_name}_{session_name}_{episode_name}.mp4"
 
     print("****")
     print("CMD:", cmd)
