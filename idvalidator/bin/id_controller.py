@@ -4,6 +4,8 @@ import os
 import os.path
 import subprocess
 import logging
+import glob
+from tqdm import tqdm
 
 import numpy as np
 import cv2
@@ -35,8 +37,19 @@ def pipe_subprocess(cmd):
             stdout = subprocess.PIPE
 
         cmd_i = [e for e in cmds[i].split(" ") if e != ""]
+        for j, token in enumerate(cmd_i):
+            if "*" in token:
+                token = sorted(glob.glob(token))
+                cmd_i[j] = token
 
-        ps_i = subprocess.Popen(cmd_i, stdin=stdin, stdout=stdout)
+        cmd_i_processed = []
+        for token in cmd_i:
+            if isinstance(token, str):
+                cmd_i_processed.append(token)
+            elif isinstance(token, list):
+                cmd_i_processed.extend(token)
+
+        ps_i = subprocess.Popen(cmd_i_processed, stdin=stdin, stdout=stdout)
         subprocesses.append(ps_i)
 
     out = subprocesses[-1].communicate()
@@ -52,7 +65,8 @@ def get_parser(ap=None):
     ap.add_argument(
         "--experiment-folder", "--input", dest="input", type=str, required=True
     )
-    ap.add_argument("--chunk", type=int, required=True)
+    ap.add_argument("--chunk", type=int, required=False, default=None)
+    ap.add_argument("--skip-frame-collection", dest="skip_frame_collection", action="store_true", default=False)
     ap.add_argument(
         "--output",
         required=True,
@@ -95,18 +109,15 @@ def compute_step(framerate, ms_res=10):
     return step
 
 
-def main(ap=None, args=None):
+def validate_session(input, output, chunk, skip_frame_collection=False):
 
-    if args is None:
-        ap = get_parser(ap)
-        args = ap.parse_args()
+    session_name = f"session_{str(chunk).zfill(6)}"
+    session_folder = os.path.join(input, session_name)
+    experiment_name = os.path.basename(input.rstrip("/"))
+    output = os.path.join(output, session_name + "_validation")
 
-    session_name = f"session_{str(args.chunk).zfill(6)}"
-    session_folder = os.path.join(args.input, session_name)
-    experiment_name = os.path.basename(args.input.rstrip("/"))
-
-    validation_pickle = os.path.join(args.output, experiment_name + ".pkl")
-    os.makedirs(args.output, exist_ok=True)
+    validation_pickle = os.path.join(output, experiment_name + ".pkl")
+    os.makedirs(output, exist_ok=True)
     validation_args = Namespace(input=session_folder, output=validation_pickle)
     validation = idvalidator.bin.validator.single_validator(
         args=validation_args
@@ -116,12 +127,11 @@ def main(ap=None, args=None):
         0 if non_id in [None, True] else len(non_id)
         for non_id in validation[session_name].identified
     ]
-    problem_frames = np.where(np.diff([0] + missing) > 0)[0]
+    problem_frames = np.where(np.diff(missing) != 0)[0]
 
     time_window_length = 5000  # seconds
 
-    store, lowres_store = load_store(args.input, args.chunk)
-
+    store, lowres_store = load_store(input, chunk=None)
     fps = int(round(store._metadata["framerate"]))
 
     # windows = [(frame_number - 1 * fps):(frame_number + (time_window_length - 1)*fps)]
@@ -148,32 +158,60 @@ def main(ap=None, args=None):
 
     for frame_in_chunk in start_frames:
         make_episode(
-            list_of_blobs.blobs_in_video,
-            store,
-            args.chunk,
-            frame_in_chunk,
-            args.output,
+            experiment_folder=input,
+            blobs_in_video=list_of_blobs.blobs_in_video,
+            chunk=chunk,
+            frame_in_chunk=frame_in_chunk,
+            output_folder=output,
             time_window_length=time_window_length,
             step=step,
             colors=colors,
+            skip_frame_collection = skip_frame_collection
         )
 
 
+
+def main(ap=None, args=None):
+
+    if args is None:
+        ap = get_parser(ap)
+        args = ap.parse_args()
+
+    n_jobs=-2
+
+
+    kwargs = {"input": args.input, "output": args.output, "skip_frame_collection": args.skip_frame_collection}
+
+
+
+    if args.chunk is None:
+        store = imgstore.new_for_filename(args.input)
+        chunks = list(store._index.chunks)
+        joblib.Parallel(n_jobs=n_jobs)(joblib.delayed(validate_session)(chunk=chunk, **kwargs) for chunk in chunks)
+    else:
+        validate_session(chunk=args.chunk, **kwargs)
+
+
 def make_episode(
+    experiment_folder,
     blobs_in_video,
-    store,
     chunk,
     frame_in_chunk,
     output_folder,
     time_window_length=5000,
     step=50,
     colors=None,
+    n_jobs=1,
+    skip_frame_collection = False # if true, it skips the frame retrieval
 ):
 
+    stores = load_store(experiment_folder, chunk=None)
+    store, lowres_store = stores
+
+    # precompute the timepoints that will be queried
     timestamp_start = store._index.get_chunk_metadata(chunk)["frame_time"][
         frame_in_chunk
     ]
-    os.makedirs(output_folder, exist_ok=True)
     timestamps = list(
         range(
             int(timestamp_start),
@@ -181,68 +219,57 @@ def make_episode(
             step,
         )
     )
-    print(timestamps)
 
-    name = str(timestamps[0])
+    # give a name to the episode and make its folder
+    episode_name = str(timestamps[0])
+    episode_folder = os.path.join(output_folder, episode_name)
+    os.makedirs(episode_folder, exist_ok=True)
 
     kwargs = {
-        "name": name,
         "experiment_folder": os.path.dirname(store.full_path),
-        "output_folder": output_folder,
+        "output_folder": episode_folder,
         "blobs_in_video": blobs_in_video,
         "colors": colors,
         "chunk": chunk,
     }
 
-    _ = joblib.Parallel(n_jobs=-2)(
-        joblib.delayed(check_feed)(timestamp=timestamp, **kwargs)
-        for timestamp in timestamps
-    )
-    # check_feed(timestamp=timestamps[0], **kwargs)
+    if not skip_frame_collection:
+        for i in tqdm(range(len(timestamps))):
+            check_feed(timestamp=timestamps[i], stores=stores, **kwargs)
 
     experiment_name = os.path.basename(
         os.path.dirname(store.full_path).rstrip("/")
     )
     session_name = f"session_{str(chunk).zfill(6)}"
 
-    cmd = f"cat {output_folder}/{name}/*.png | ffmpeg -y -f image2pipe -i - -framerate 1 -c:v libx264 {output_folder}/{experiment_name}_{session_name}_{name.zfill(10)}.mp4"
+    cmd = f"cat {episode_folder}/*.png | ffmpeg -y -f image2pipe -i - -framerate 1 -c:v libx264 {episode_folder}/{experiment_name}_{session_name}_{episode_name.zfill(10)}.mp4"
 
     print("****")
-    print(cmd)
+    print("CMD:", cmd)
     print("****")
 
     out, subprocesses = pipe_subprocess(cmd)
-    return status
+    return out
 
 
 def check_feed(
-    name,
     blobs_in_video,
     timestamp,
     output_folder,
+    stores,
     colors=None,
-    stores=None,
     experiment_folder=None,
     chunk=None,
 ):
 
     assert not (stores is None and experiment_folder is None)
 
-    dest_folder = os.path.join(output_folder, name)
-    os.makedirs(dest_folder, exist_ok=True)
-    dest = os.path.join(dest_folder, f"{str(int(timestamp)).zfill(10)}.png")
+    dest = os.path.join(output_folder, f"{str(int(timestamp)).zfill(10)}.png")
 
     if os.path.exists(dest):
         return None
 
-    if stores is None:
-        if chunk is not None:
-            chunk_numbers = [chunk]
-        logger.warning(experiment_folder)
-        store, lowres_store = load_store(experiment_folder, chunk=None)
-
-    else:
-        store, lowres_store = stores
+    store, lowres_store = stores
 
     chunk_first_frame = store._get_chunk_metadata(chunk)["frame_number"][0]
 
