@@ -18,21 +18,22 @@ Validation = namedtuple(
 )
 
 
-
 def check_blob_has_identity(blob):
     """
     True if blob has a final identity
     """
 
     if isinstance(blob.final_identities, list):
-        return (
-            len(blob.final_identities) > 0
-            and blob.final_identities[0] not in  [None, 0]
-        )
+        return len(blob.final_identities) > 0 and blob.final_identities[
+            0
+        ] not in [None, 0]
     else:
         return blob.final_identities is not None and blob.final_identities != 0
 
-def check_blobs_annotation_function(blobs_in_frame, function=check_blob_has_identity):
+
+def check_blobs_annotation_function(
+    blobs_in_frame, function=check_blob_has_identity
+):
     """
     True if every blob passes function
     """
@@ -53,9 +54,9 @@ def check_all_identities_are_found(blobs_in_frame, identities):
         itertools.chain(*[blob.final_identities for blob in blobs_in_frame])
     )
     # tracked_identities = [*i if isinstance(i, list) else i for i in tracked_identities]
-    #blobs = [
+    # blobs = [
     #    blob for blob in blobs_in_frame if blobs_in_frame.final_identities[0] in identities
-    #]  # empty if all ids are found
+    # ]  # empty if all ids are found
 
     ids = [id for id in identities if id not in tracked_identities]
 
@@ -136,7 +137,6 @@ def centroids_swap(
     diagonal = np.eye(n_animals_in_this_pair) == 1
     diag_distances = distances[diagonal]
 
-
     # the element in the ith row is the distance between the centroids with id i in between frames
     # no animal should have less distance than this unless there is a swap
     diag_distances_expanded = np.stack(
@@ -151,7 +151,6 @@ def centroids_swap(
 
     # with 1. we make sure we dont flag as a swap
     # events of high movement
-
 
     swap = np.bitwise_and(
         (distances < body_length_px * jump_size),
@@ -253,7 +252,9 @@ def check_blobs(blob_file, **kwargs):
                             **kwargs,
                         )
                     except Exception as error:
-                        logger.error(f"Problem with {blob_file} - frame {i} vs {previous_good_frame}")
+                        logger.error(
+                            f"Problem with {blob_file} - frame {i} vs {previous_good_frame}"
+                        )
                         logger.error(error)
                         logger.error(traceback.print_exc())
 
